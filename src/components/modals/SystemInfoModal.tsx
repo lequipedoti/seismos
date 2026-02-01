@@ -63,7 +63,7 @@ export default function SystemInfoModal({ isOpen, onClose }: SystemInfoModalProp
                             <div className="bg-black/90 text-green-400 p-4 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
                                 <div className="mb-2 text-gray-500">// KARAR MEKANİZMASI (DECISION LOGIC)</div>
                                 <div className="pl-4">
-                                    <span className="text-purple-400">IF</span> (Neighbors &ge; 3 status == <span className="text-red-400">CRITICAL</span>)<br />
+                                    <span className="text-purple-400">IF</span> (Neighborhood_Avg_Status &ge; <span className="text-red-400">DYNAMIC_THRESHOLD</span>)<br />
                                     <span className="text-purple-400">AND</span> (Target_Node == <span className="text-gray-400">SILENT</span>)<br />
                                     <span className="text-purple-400">THEN</span><br />
                                     &nbsp;&nbsp;Target_Status = <span className="text-purple-400 bg-purple-900/30 px-1">PROBABLE_COLLAPSE (OLASI YIKIM)</span>
