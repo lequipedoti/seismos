@@ -1,26 +1,264 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
+@custom-variant dark (&:is(.dark *));
+
+/* SEISMOS - Sci-Fi Industrial Theme */
 :root {
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  /* Status Colors */
+  --status-stable: #22c55e;
+  --status-anomaly: #eab308;
+  --status-warning: #f97316;
+  --status-critical: #ef4444;
+
+  /* Obsidian Dark Theme / Light Override */
   --background: #ffffff;
-  --foreground: #171717;
+  --background-secondary: #f4f4f5;
+  --background-elevated: #ffffff;
+  --foreground: #09090b;
+  --foreground-muted: #71717a;
+
+  /* Accent Colors */
+  --accent-cyan: #06b6d4;
+  --accent-blue: #3b82f6;
+  --accent-purple: #8b5cf6;
+
+  /* Glow Effects */
+  --glow-green: 0 0 20px rgba(34, 197, 94, 0.5);
+  --glow-yellow: 0 0 20px rgba(234, 179, 8, 0.5);
+  --glow-orange: 0 0 20px rgba(249, 115, 22, 0.5);
+  --glow-red: 0 0 20px rgba(239, 68, 68, 0.5);
+  --glow-cyan: 0 0 20px rgba(6, 182, 212, 0.5);
+
+  /* Component Colors */
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  --primary: #0891b2;
+  /* Darker cyan for light mode readability */
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #ef4444;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #06b6d4;
+
+  /* Chart Colors */
+  --chart-1: #06b6d4;
+  --chart-2: #22c55e;
+  --chart-3: #eab308;
+  --chart-4: #f97316;
+  --chart-5: #ef4444;
+
+  --radius: 0.5rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Custom Status Colors */
+  --color-status-stable: var(--status-stable);
+  --color-status-anomaly: var(--status-anomaly);
+  --color-status-warning: var(--status-warning);
+  --color-status-critical: var(--status-critical);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-purple: var(--accent-purple);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+
+  code,
+  pre,
+  .mono {
+    font-family: var(--font-mono);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Glitch Effect Animation */
+@keyframes glitch {
+  0% {
+    transform: translate(0);
+    filter: hue-rotate(0deg);
+  }
+
+  10% {
+    transform: translate(-2px, 2px);
+    filter: hue-rotate(90deg);
+  }
+
+  20% {
+    transform: translate(2px, -2px);
+    filter: hue-rotate(180deg);
+  }
+
+  30% {
+    transform: translate(-2px, 2px);
+    filter: hue-rotate(270deg);
+  }
+
+  40% {
+    transform: translate(2px, -2px);
+    filter: hue-rotate(360deg);
+  }
+
+  50% {
+    transform: translate(-2px, 2px);
+  }
+
+  60% {
+    transform: translate(2px, -2px);
+  }
+
+  70% {
+    transform: translate(-2px, 2px);
+  }
+
+  80% {
+    transform: translate(2px, -2px);
+  }
+
+  90% {
+    transform: translate(-2px, 2px);
+  }
+
+  100% {
+    transform: translate(0);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes scan-line {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+.glitch-effect {
+  animation: glitch 0.3s ease-in-out;
+}
+
+.pulse-stable {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.pulse-anomaly {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.pulse-warning {
+  animation: pulse-glow 1s ease-in-out infinite;
+}
+
+.pulse-critical {
+  animation: pulse-glow 0.5s ease-in-out infinite;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Signal Loss Effect */
+.signal-loss {
+  opacity: 0.4;
+  filter: grayscale(50%);
+}
+
+/* Grid Background Pattern */
+.grid-pattern {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Leaflet overrides for light theme */
+.leaflet-container {
+  background: var(--background) !important;
+}
+
+.leaflet-control-zoom a {
+  background: var(--background-elevated) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: var(--foreground-muted) !important;
 }
