@@ -4,10 +4,10 @@ import { useSeismosStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 
 const STAGES = [
-    { id: 'raw', name: 'HAM VERİ', description: 'Doğrudan sinyal akışı' },
-    { id: 'filter', name: 'FİLTRE', description: 'Hareketli ortalama + Yüksek Geçiren' },
-    { id: 'correlate', name: 'KORELASYON', description: 'Çoklu düğüm karşılaştırma' },
-    { id: 'interpret', name: 'YORUMLAMA', description: 'Durum sınıflandırması' },
+    { id: 'raw', name: 'AŞAMA 1: SİNYAL KAZANIMI', description: 'Gerçek zamanlı ham veri akışı' },
+    { id: 'filter', name: 'AŞAMA 2: DİJİTAL FİLTRELEME', description: 'MA + HP Spektral Temizlik' },
+    { id: 'correlate', name: 'AŞAMA 3: OLAY KORELASYONU', description: 'Node’lar arası uzamsal doğrulama' },
+    { id: 'interpret', name: 'AŞAMA 4: KARAR MEKANİZMASI', description: 'INSD tabanlı durum sınıflandırması' },
 ] as const;
 
 const STATUS_COLORS = {
@@ -74,17 +74,15 @@ export default function ValidationHUD() {
                                         </span>
                                         {isActive && (
                                             <motion.span
-                                                className="text-xs text-cyan-500 font-mono"
+                                                className="text-[10px] text-cyan-500 font-mono font-bold"
                                                 animate={{ opacity: [1, 0.5, 1] }}
                                                 transition={{ repeat: Infinity, duration: 1 }}
                                             >
-                                                İŞLENİYOR...
+                                                CALCULATING...
                                             </motion.span>
                                         )}
                                         {isComplete && (
-                                            <span className="text-xs text-green-500 font-mono">
-                                                ✓ ONAYLANDI
-                                            </span>
+                                            <span className="text-green-500 font-bold text-xs">✓</span>
                                         )}
                                     </div>
                                     <div className="text-xs text-muted-foreground truncate">

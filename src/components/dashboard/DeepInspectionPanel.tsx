@@ -35,8 +35,11 @@ export default function DeepInspectionPanel() {
             {/* GLOBAL SYSTEM STATUS HEADER (Always Visible) */}
             <div className="p-6 border-b border-border bg-white shrink-0">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-cyan-600 flex items-center justify-center text-white shadow-sm">
+                    <div
+                        className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity select-none group"
+                        onClick={() => setShowInfoModal(true)}
+                    >
+                        <div className="w-8 h-8 rounded-lg bg-cyan-600 flex items-center justify-center text-white shadow-sm group-hover:bg-cyan-700 transition-colors">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M2 12h4l3-9 3 18 3-9h4" />
                             </svg>
@@ -44,8 +47,7 @@ export default function DeepInspectionPanel() {
                         <h1 className="font-mono text-xl font-black tracking-tight text-gray-900 leading-none">SEISMOS</h1>
 
                         <button
-                            onClick={() => setShowInfoModal(true)}
-                            className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 hover:bg-cyan-100 hover:text-cyan-700 flex items-center justify-center transition-colors ml-1"
+                            className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center ml-1 group-hover:bg-cyan-100 group-hover:text-cyan-700 transition-colors"
                             title="Sistem Mimarisi ve INSD Hakkında Bilgi"
                         >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -57,7 +59,12 @@ export default function DeepInspectionPanel() {
                     </div>
                     <Badge
                         variant="outline"
-                        className={`font-mono text-xs font-bold px-3 py-1 border-2 ${isSimulationMode ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
+                        onClick={toggleSimulation}
+                        className={`font-mono text-xs font-bold px-3 py-1 border-2 cursor-pointer transition-all hover:scale-105 active:scale-95 select-none ${isSimulationMode
+                            ? 'bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100'
+                            : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                            }`}
+                        title="Veri Kaynağını Değiştir (Simülasyon / Fiziksel)"
                     >
                         {isSimulationMode ? 'SİMÜLASYON' : 'FİZİKSEL'}
                     </Badge>
@@ -93,12 +100,7 @@ export default function DeepInspectionPanel() {
                             </div>
                         </div>
 
-                        <button
-                            onClick={toggleSimulation}
-                            className="w-full py-2 text-xs font-mono border border-dashed border-gray-300 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-                        >
-                            KAYNAK MODUNU DEĞİŞTİR
-                        </button>
+
 
                         <div className="mt-8 pt-8 border-t border-dashed border-gray-200 text-center">
                             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-50 mb-3 text-gray-400">
@@ -108,7 +110,7 @@ export default function DeepInspectionPanel() {
                                 </svg>
                             </div>
                             <p className="text-xs text-gray-500 max-w-[200px] mx-auto">
-                                Detaylı sinyal analizi ve yapısal durum kontrolü için haritadan bir düğüm seçin.
+                                Detaylı sinyal analizi ve yapısal durum kontrolü için haritadan bir node seçin.
                             </p>
                         </div>
                     </div>

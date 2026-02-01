@@ -159,7 +159,7 @@ export default function SeismicMap() {
                         className="absolute top-4 left-4 bg-red-900/50 border border-red-500/50 rounded px-3 py-2 backdrop-blur-sm"
                     >
                         <span className="text-red-400 font-mono text-sm">
-                            ⚠ SİNYAL_KAYBI: {signalLossNodes.size} düğüm
+                            ⚠ SİNYAL_KAYBI: {signalLossNodes.size} node
                         </span>
                     </motion.div>
                 )}
