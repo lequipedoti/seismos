@@ -1,16 +1,16 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import CommandCenter from '@/components/dashboard/CommandCenter';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSeismosStore } from '@/lib/store';
-import { simulator, DEMO_NODES } from '@/lib/simulator';
+import { earthquakeSimulator, DEMO_NODES } from '@/lib/simulator';
 import { signalProcessor } from '@/lib/signal-processor';
+import DashboardPanel from '@/components/dashboard/DashboardPanel';
 
 const SeismicMap = dynamic(() => import('@/components/map/SeismicMap'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-400 text-sm">
+    <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-400">
       Harita yükleniyor...
     </div>
   ),
@@ -21,54 +21,47 @@ export default function Home() {
     setNodes,
     addReading,
     setProcessedResult,
-    updatePipelineStage,
-    updateSignalLoss,
-    isSimulationMode
+    updateBuildingSummary,
   } = useSeismosStore();
 
-  // Initialize Simulator
+  const isStarted = useRef(false);
+
   useEffect(() => {
-    // Set initial nodes
+    if (isStarted.current) return;
+    isStarted.current = true;
+
+    // Node'ları yükle
     setNodes(DEMO_NODES as any);
 
-    if (isSimulationMode) {
-      simulator.start((reading) => {
-        // 1. Ingest reading
-        updatePipelineStage('raw', 'processing');
-        addReading(reading);
-        updatePipelineStage('raw', 'complete');
+    // Arka plan titreşimi başlat
+    earthquakeSimulator.start((reading) => {
+      addReading(reading);
+      const result = signalProcessor.process(reading);
+      setProcessedResult(reading.node_id, result);
+    });
 
-        // 2. Process reading
-        updatePipelineStage('filter', 'processing');
-        const result = signalProcessor.process(reading);
-
-        // 3. Update store with results
-        setProcessedResult(reading.node_id, result);
-
-        // Update global stages
-        updatePipelineStage('filter', result.stages.filter.complete ? 'complete' : 'processing');
-        updatePipelineStage('correlate', result.stages.correlate.complete ? 'complete' : 'processing');
-        updatePipelineStage('interpret', result.stages.interpret.complete ? 'complete' : 'processing');
-      });
-    } else {
-      simulator.stop();
-    }
-
-    // Signal loss check interval
-    const signalCheck = setInterval(updateSignalLoss, 1000);
+    // Özet güncellemesi
+    const summaryInterval = setInterval(updateBuildingSummary, 500);
 
     return () => {
-      simulator.stop();
-      clearInterval(signalCheck);
+      earthquakeSimulator.stop();
+      clearInterval(summaryInterval);
     };
-  }, [isSimulationMode, setNodes, addReading, setProcessedResult, updatePipelineStage, updateSignalLoss]);
+  }, [setNodes, addReading, setProcessedResult, updateBuildingSummary]);
 
   return (
-    <CommandCenter>
-      <div className="w-full h-[calc(100vh-64px)] relative">
-        <SeismicMap />
+    <div className="h-screen bg-slate-950 flex">
+      {/* Harita */}
+      <div className="flex-1 p-3">
+        <div className="w-full h-full rounded-xl overflow-hidden border border-slate-800">
+          <SeismicMap />
+        </div>
       </div>
-    </CommandCenter>
+
+      {/* Panel */}
+      <div className="w-[360px] border-l border-slate-800 bg-slate-900">
+        <DashboardPanel />
+      </div>
+    </div>
   );
 }
-

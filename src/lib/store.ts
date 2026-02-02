@@ -2,232 +2,127 @@ import { create } from 'zustand';
 import type { Node, SensorReading, NodeStatus } from './supabase/types';
 import type { PipelineResult } from './signal-processor';
 
+export interface BuildingSummary {
+    safe: number;
+    damaged: number;
+    critical: number;
+    collapsed: number;
+}
+
 export interface SeismosState {
     // Nodes
     nodes: Map<string, Node>;
     selectedNodeId: string | null;
 
-    // Readings
-    readings: Map<string, SensorReading[]>;
+    // Readings & Results
     latestReadings: Map<string, SensorReading>;
     processedResults: Map<string, PipelineResult>;
 
-    // Pipeline state
-    pipelineStages: {
-        raw: 'idle' | 'processing' | 'complete';
-        filter: 'idle' | 'processing' | 'complete';
-        correlate: 'idle' | 'processing' | 'complete';
-        interpret: 'idle' | 'processing' | 'complete';
-    };
-
-    // Signal loss tracking
-    lastUpdateTimes: Map<string, number>;
-    signalLossNodes: Set<string>;
+    // Earthquake state
+    isEarthquakeActive: boolean;
+    earthquakeProgress: number; // 0-100
+    buildingSummary: BuildingSummary;
 
     // Global stats
     activeNodeCount: number;
     peakMagnitude: number;
-    systemHealth: 'optimal' | 'degraded' | 'critical';
-
-    // UI State
-    isSimulationMode: boolean;
-    showFFT: boolean;
 
     // Actions
     setNodes: (nodes: Node[]) => void;
-    updateNode: (nodeId: string, updates: Partial<Node>) => void;
     selectNode: (nodeId: string | null) => void;
     addReading: (reading: SensorReading) => void;
     setProcessedResult: (nodeId: string, result: PipelineResult) => void;
-    updatePipelineStage: (stage: keyof SeismosState['pipelineStages'], status: 'idle' | 'processing' | 'complete') => void;
-    updateSignalLoss: () => void;
-    toggleSimulation: () => void;
-    toggleFFT: () => void;
-    reset: () => void;
+    setEarthquakeActive: (active: boolean) => void;
+    setEarthquakeProgress: (progress: number) => void;
+    updateBuildingSummary: () => void;
+    resetToSafe: () => void;
 }
 
-const MAX_READINGS_PER_NODE = 200;
-const SIGNAL_LOSS_THRESHOLD = 5000; // 5 seconds
-
-export const useSeismosStore = create<SeismosState>((set) => ({
+export const useSeismosStore = create<SeismosState>((set, get) => ({
     // Initial state
     nodes: new Map(),
     selectedNodeId: null,
-    readings: new Map(),
     latestReadings: new Map(),
     processedResults: new Map(),
-    pipelineStages: {
-        raw: 'idle',
-        filter: 'idle',
-        correlate: 'idle',
-        interpret: 'idle',
-    },
-    lastUpdateTimes: new Map(),
-    signalLossNodes: new Set(),
+    isEarthquakeActive: false,
+    earthquakeProgress: 0,
+    buildingSummary: { safe: 0, damaged: 0, critical: 0, collapsed: 0 },
     activeNodeCount: 0,
     peakMagnitude: 0,
-    systemHealth: 'optimal',
-    isSimulationMode: true,
-    showFFT: false,
 
     // Actions
     setNodes: (nodes) => set(() => {
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
-        return { nodes: nodeMap, activeNodeCount: nodes.length };
-    }),
-
-    updateNode: (nodeId, updates) => set((state) => {
-        const node = state.nodes.get(nodeId);
-        if (node) {
-            const updatedNodes = new Map(state.nodes);
-            updatedNodes.set(nodeId, { ...node, ...updates });
-            return { nodes: updatedNodes };
-        }
-        return state;
+        return {
+            nodes: nodeMap,
+            activeNodeCount: nodes.length,
+            buildingSummary: { safe: nodes.length, damaged: 0, critical: 0, collapsed: 0 }
+        };
     }),
 
     selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
 
     addReading: (reading) => set((state) => {
-        const newReadings = new Map(state.readings);
-        const nodeReadings = [...(newReadings.get(reading.node_id) || []), reading];
-
-        // Keep only last N readings
-        if (nodeReadings.length > MAX_READINGS_PER_NODE) {
-            nodeReadings.shift();
-        }
-        newReadings.set(reading.node_id, nodeReadings);
-
         const newLatest = new Map(state.latestReadings);
         newLatest.set(reading.node_id, reading);
-
-        const newUpdateTimes = new Map(state.lastUpdateTimes);
-        newUpdateTimes.set(reading.node_id, Date.now());
-
-        // Update peak magnitude
         const newPeak = Math.max(state.peakMagnitude, reading.magnitude);
-
-        return {
-            readings: newReadings,
-            latestReadings: newLatest,
-            lastUpdateTimes: newUpdateTimes,
-            peakMagnitude: newPeak,
-        };
+        return { latestReadings: newLatest, peakMagnitude: newPeak };
     }),
 
     setProcessedResult: (nodeId, result) => set((state) => {
         const newResults = new Map(state.processedResults);
         newResults.set(nodeId, result);
 
-        // Update node status based on result
+        // Update node status
         const node = state.nodes.get(nodeId);
         if (node && node.status !== result.status) {
             const updatedNodes = new Map(state.nodes);
             updatedNodes.set(nodeId, { ...node, status: result.status });
-
-            // Determine system health
-            let criticalCount = 0;
-            let warningCount = 0;
-            updatedNodes.forEach((n) => {
-                if (n.status === 'critical') criticalCount++;
-                if (n.status === 'warning') warningCount++;
-            });
-
-            let systemHealth: 'optimal' | 'degraded' | 'critical' = 'optimal';
-            if (criticalCount > 0) systemHealth = 'critical';
-            else if (warningCount > 0) systemHealth = 'degraded';
-
-            return { processedResults: newResults, nodes: updatedNodes, systemHealth };
+            return { processedResults: newResults, nodes: updatedNodes };
         }
 
         return { processedResults: newResults };
     }),
 
-    updatePipelineStage: (stage, status) => set((state) => ({
-        pipelineStages: { ...state.pipelineStages, [stage]: status },
-    })),
-
-    updateSignalLoss: () => set((state) => {
-        const now = Date.now();
-        const newSignalLoss = new Set<string>();
-
-        // INSD Logic Implementation
-        // Channel 1: Correlation Gap (Event detected by neighbors)
-        // Channel 2: Heartbeat Loss (Handled by SIGNAL_LOSS_THRESHOLD)
-        // Channel 3: Neighborhood Anomaly (Neighbor status check)
-
-        const updatedNodes = new Map(state.nodes);
-        let hasStatusUpdates = false;
-
-        state.lastUpdateTimes.forEach((lastUpdate, nodeId) => {
-            if (now - lastUpdate > SIGNAL_LOSS_THRESHOLD) {
-                newSignalLoss.add(nodeId);
-
-                // Check neighbors for INSD
-                // In a real system, we'd use geospatial distance. 
-                // For this simulation, we'll check the global state of other nodes as "neighbors"
-                let criticalNeighbors = 0;
-                let activeNeighbors = 0;
-
-                state.nodes.forEach((neighbor) => {
-                    if (neighbor.id !== nodeId && !newSignalLoss.has(neighbor.id)) {
-                        activeNeighbors++;
-                        if (neighbor.status === 'critical' || neighbor.status === 'warning') {
-                            criticalNeighbors++;
-                        }
-                    }
-                });
-
-                // INSD Decision Rule:
-                // IF (Topluluğun %30'undan fazlası veya en az 3 komşu kritik durumdaysa)
-                // VE (Hedef Node Suskunsa)
-                // THEN (Olası Yıkım)
-                const isCollapseProbable = criticalNeighbors >= 3 || (activeNeighbors > 0 && (criticalNeighbors / activeNeighbors) > 0.3);
-
-                const currentNode = updatedNodes.get(nodeId);
-                if (currentNode) {
-                    if (isCollapseProbable && currentNode.status !== 'collapse') {
-                        updatedNodes.set(nodeId, { ...currentNode, status: 'collapse' });
-                        hasStatusUpdates = true;
-                    } else if (!isCollapseProbable && currentNode.status !== 'stable' && !hasStatusUpdates) {
-                        // Reset to stable if it was just signal loss without collapse context
-                        // (Optional, maybe keep last known state)
-                    }
-                }
-            }
-        });
-
-        if (hasStatusUpdates) {
-            return { signalLossNodes: newSignalLoss, nodes: updatedNodes };
-        }
-
-        return { signalLossNodes: newSignalLoss };
+    setEarthquakeActive: (active) => set({
+        isEarthquakeActive: active,
+        earthquakeProgress: active ? 0 : 100
     }),
 
-    toggleSimulation: () => set((state) => ({
-        isSimulationMode: !state.isSimulationMode,
-    })),
+    setEarthquakeProgress: (progress) => set({ earthquakeProgress: progress }),
 
-    toggleFFT: () => set((state) => ({
-        showFFT: !state.showFFT,
-    })),
+    updateBuildingSummary: () => set((state) => {
+        let safe = 0, damaged = 0, critical = 0, collapsed = 0;
 
-    reset: () => set({
-        nodes: new Map(),
-        selectedNodeId: null,
-        readings: new Map(),
-        latestReadings: new Map(),
-        processedResults: new Map(),
-        pipelineStages: {
-            raw: 'idle',
-            filter: 'idle',
-            correlate: 'idle',
-            interpret: 'idle',
-        },
-        lastUpdateTimes: new Map(),
-        signalLossNodes: new Set(),
-        activeNodeCount: 0,
-        peakMagnitude: 0,
-        systemHealth: 'optimal',
+        state.processedResults.forEach((result) => {
+            const score = result.damageScore?.score || 0;
+            if (score >= 90) collapsed++;
+            else if (score >= 70) critical++;
+            else if (score >= 30) damaged++;
+            else safe++;
+        });
+
+        // Count nodes without results as safe
+        const noResultCount = state.nodes.size - state.processedResults.size;
+        safe += noResultCount;
+
+        return { buildingSummary: { safe, damaged, critical, collapsed } };
+    }),
+
+    resetToSafe: () => set((state) => {
+        const updatedNodes = new Map(state.nodes);
+        updatedNodes.forEach((node, id) => {
+            updatedNodes.set(id, { ...node, status: 'stable' });
+        });
+
+        return {
+            nodes: updatedNodes,
+            processedResults: new Map(),
+            latestReadings: new Map(),
+            peakMagnitude: 0,
+            isEarthquakeActive: false,
+            earthquakeProgress: 0,
+            buildingSummary: { safe: state.nodes.size, damaged: 0, critical: 0, collapsed: 0 }
+        };
     }),
 }));
