@@ -10,8 +10,8 @@ import { signalProcessor } from '@/lib/signal-processor';
 const SeismicMap = dynamic(() => import('@/components/map/SeismicMap'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-[#050505] text-cyan-500 font-mono animate-pulse">
-      INITIALIZING GEOSPATIAL INTERFACE...
+    <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-400 text-sm">
+      Harita yükleniyor...
     </div>
   ),
 });
@@ -67,10 +67,8 @@ export default function Home() {
     <CommandCenter>
       <div className="w-full h-[calc(100vh-64px)] relative">
         <SeismicMap />
-
-        {/* Overlay Grid lines for sci-fi look */}
-        <div className="absolute inset-0 pointer-events-none grid-pattern opacity-20" />
       </div>
     </CommandCenter>
   );
 }
+
