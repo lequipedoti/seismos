@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useSeismosStore } from '@/lib/store';
 import { earthquakeSimulator, DEMO_NODES } from '@/lib/simulator';
-import { signalProcessor } from '@/lib/signal-processor';
+
+type CategoryFilter = null | 'safe' | 'damaged' | 'critical' | 'collapsed';
 
 export default function DashboardPanel() {
     const {
@@ -16,16 +17,36 @@ export default function DashboardPanel() {
         earthquakeProgress,
         setEarthquakeActive,
         setEarthquakeProgress,
-        addReading,
-        setProcessedResult,
         updateBuildingSummary,
         resetToSafe,
     } = useSeismosStore();
 
     const [canReset, setCanReset] = useState(false);
+    const [activeFilter, setActiveFilter] = useState<CategoryFilter>(null);
 
     const node = selectedNodeId ? nodes.get(selectedNodeId) : null;
     const result = selectedNodeId ? processedResults.get(selectedNodeId) : null;
+
+    // Filtrelenmiş bina listesi
+    const getFilteredBuildings = () => {
+        const buildings: Array<{ id: string; name: string; score: number }> = [];
+
+        nodes.forEach((n, id) => {
+            const r = processedResults.get(id);
+            const score = r?.damageScore?.score || 0;
+
+            let category: CategoryFilter = 'safe';
+            if (score >= 90) category = 'collapsed';
+            else if (score >= 70) category = 'critical';
+            else if (score >= 30) category = 'damaged';
+
+            if (activeFilter === category) {
+                buildings.push({ id, name: n.name, score });
+            }
+        });
+
+        return buildings.sort((a, b) => b.score - a.score);
+    };
 
     const handleTriggerEarthquake = () => {
         if (isEarthquakeActive) return;
@@ -33,19 +54,16 @@ export default function DashboardPanel() {
         setEarthquakeActive(true);
         setCanReset(false);
 
-        // Rastgele episantr seç
         const epicenter = DEMO_NODES[Math.floor(Math.random() * DEMO_NODES.length)];
 
         earthquakeSimulator.triggerEarthquake(
             {
-                intensity: 1.2 + Math.random() * 0.8, // 1.2 - 2.0
+                intensity: 1.5 + Math.random() * 0.5,
                 durationMs: 6000,
                 epicenterLat: epicenter.lat,
                 epicenterLng: epicenter.lng,
             },
-            (progress) => {
-                setEarthquakeProgress(progress);
-            },
+            (progress) => setEarthquakeProgress(progress),
             () => {
                 setEarthquakeActive(false);
                 updateBuildingSummary();
@@ -57,15 +75,17 @@ export default function DashboardPanel() {
     const handleReset = () => {
         resetToSafe();
         setCanReset(false);
+        setActiveFilter(null);
     };
 
-    // Skor rengini belirle
     const getScoreColor = (score: number) => {
         if (score >= 90) return { bg: 'bg-red-500', text: 'text-red-400', label: 'Yıkılmış' };
         if (score >= 70) return { bg: 'bg-orange-500', text: 'text-orange-400', label: 'Ağır Hasarlı' };
         if (score >= 30) return { bg: 'bg-yellow-500', text: 'text-yellow-400', label: 'Hasarlı' };
         return { bg: 'bg-emerald-500', text: 'text-emerald-400', label: 'Güvenli' };
     };
+
+    const filteredBuildings = activeFilter ? getFilteredBuildings() : [];
 
     return (
         <div className="h-full flex flex-col">
@@ -122,34 +142,102 @@ export default function DashboardPanel() {
                 )}
             </div>
 
-            {/* Özet */}
+            {/* Özet - Tıklanabilir */}
             <div className="p-4 border-b border-slate-800">
                 <h3 className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-3">
-                    Bina Durumu Özeti
+                    Bina Durumu {activeFilter && <span className="text-slate-400">• Listeyi görmek için tıkla</span>}
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+                    <button
+                        onClick={() => setActiveFilter(activeFilter === 'safe' ? null : 'safe')}
+                        className={`text-left rounded-lg p-3 transition-all ${activeFilter === 'safe'
+                                ? 'bg-emerald-500/20 border-2 border-emerald-500/50'
+                                : 'bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/15'
+                            }`}
+                    >
                         <div className="text-2xl font-bold text-emerald-400">{buildingSummary.safe}</div>
                         <div className="text-xs text-emerald-400/70">Güvenli</div>
-                    </div>
-                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                    </button>
+                    <button
+                        onClick={() => setActiveFilter(activeFilter === 'damaged' ? null : 'damaged')}
+                        className={`text-left rounded-lg p-3 transition-all ${activeFilter === 'damaged'
+                                ? 'bg-yellow-500/20 border-2 border-yellow-500/50'
+                                : 'bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/15'
+                            }`}
+                    >
                         <div className="text-2xl font-bold text-yellow-400">{buildingSummary.damaged}</div>
                         <div className="text-xs text-yellow-400/70">Hasarlı</div>
-                    </div>
-                    <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                    </button>
+                    <button
+                        onClick={() => setActiveFilter(activeFilter === 'critical' ? null : 'critical')}
+                        className={`text-left rounded-lg p-3 transition-all ${activeFilter === 'critical'
+                                ? 'bg-orange-500/20 border-2 border-orange-500/50'
+                                : 'bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/15'
+                            }`}
+                    >
                         <div className="text-2xl font-bold text-orange-400">{buildingSummary.critical}</div>
                         <div className="text-xs text-orange-400/70">Ağır Hasarlı</div>
-                    </div>
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                    </button>
+                    <button
+                        onClick={() => setActiveFilter(activeFilter === 'collapsed' ? null : 'collapsed')}
+                        className={`text-left rounded-lg p-3 transition-all ${activeFilter === 'collapsed'
+                                ? 'bg-red-500/20 border-2 border-red-500/50'
+                                : 'bg-red-500/10 border border-red-500/20 hover:bg-red-500/15'
+                            }`}
+                    >
                         <div className="text-2xl font-bold text-red-400">{buildingSummary.collapsed}</div>
                         <div className="text-xs text-red-400/70">Yıkılmış</div>
-                    </div>
+                    </button>
                 </div>
             </div>
 
-            {/* Seçili Bina Detayı */}
+            {/* İçerik Alanı */}
             <div className="flex-1 overflow-y-auto p-4">
-                {node ? (
+                {/* Filtre aktifse bina listesi */}
+                {activeFilter && filteredBuildings.length > 0 ? (
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-medium text-slate-300">
+                                {activeFilter === 'safe' && 'Güvenli Binalar'}
+                                {activeFilter === 'damaged' && 'Hasarlı Binalar'}
+                                {activeFilter === 'critical' && 'Ağır Hasarlı Binalar'}
+                                {activeFilter === 'collapsed' && 'Yıkılmış Binalar'}
+                            </h3>
+                            <button
+                                onClick={() => setActiveFilter(null)}
+                                className="text-xs text-slate-500 hover:text-slate-300"
+                            >
+                                Kapat
+                            </button>
+                        </div>
+                        {filteredBuildings.map((b) => (
+                            <button
+                                key={b.id}
+                                onClick={() => {
+                                    selectNode(b.id);
+                                    setActiveFilter(null);
+                                }}
+                                className="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors"
+                            >
+                                <span className="text-sm text-white">{b.name}</span>
+                                <span className={`text-sm font-mono ${getScoreColor(b.score).text}`}>
+                                    {b.score}/100
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                ) : activeFilter && filteredBuildings.length === 0 ? (
+                    <div className="text-center py-8">
+                        <p className="text-sm text-slate-500">Bu kategoride bina yok</p>
+                        <button
+                            onClick={() => setActiveFilter(null)}
+                            className="text-xs text-slate-400 hover:text-slate-300 mt-2"
+                        >
+                            Geri dön
+                        </button>
+                    </div>
+                ) : node ? (
+                    /* Seçili Bina Detayı */
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -190,6 +278,7 @@ export default function DashboardPanel() {
                         )}
                     </div>
                 ) : (
+                    /* Boş Durum */
                     <div className="h-full flex items-center justify-center">
                         <div className="text-center">
                             <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-3">

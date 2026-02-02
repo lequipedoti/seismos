@@ -59,7 +59,7 @@ export class EarthquakeSimulator {
         if (!this.onReading) return;
 
         DEMO_NODES.forEach((node) => {
-            const noise = 0.005; // Çok düşük
+            const noise = 0.001; // Çok çok düşük - stabil durum
             const accel_x = (Math.random() - 0.5) * noise;
             const accel_y = (Math.random() - 0.5) * noise;
             const accel_z = (Math.random() - 0.5) * noise;

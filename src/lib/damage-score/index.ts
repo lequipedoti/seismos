@@ -24,16 +24,16 @@ import type { NodeStatus } from '../supabase/types';
 export interface DamageFeatures {
     /** Percentage deviation from baseline frequency (0-100+) */
     frequencyShift: number;
-    
+
     /** Normalized peak vibration energy (0-1 scale) */
     peakEnergy: number;
-    
+
     /** Seconds of sustained abnormal vibration (sliding window) */
     abnormalDuration: number;
-    
+
     /** Current estimated dominant frequency (Hz) via zero-crossing */
     currentFrequency: number;
-    
+
     /** Baseline dominant frequency (Hz) established during stable period */
     baselineFrequency: number;
 }
@@ -44,23 +44,23 @@ export interface DamageFeatures {
 export interface DamageScore {
     /** Numerical score 0-100 */
     score: number;
-    
+
     /** Categorical classification for UI display */
     category: 'safe' | 'risky' | 'heavily_damaged';
-    
+
     /** Turkish label for UI */
     categoryLabel: string;
-    
+
     /** Individual component scores for explainability */
     components: {
         frequencyShiftScore: number;
         peakEnergyScore: number;
         durationScore: number;
     };
-    
+
     /** Raw features for future ML training */
     features: DamageFeatures;
-    
+
     /** Maps to existing NodeStatus for backward compatibility */
     legacyStatus: NodeStatus;
 }
@@ -94,17 +94,18 @@ const SCALING = {
      * Chosen to avoid false alarms on minor variations
      */
     frequencyShift: 4,
-    
+
     /**
      * Duration multiplier: ×10
      * 10 seconds of sustained anomaly = 100 points
      */
     duration: 10,
-    
+
     /**
-     * Energy is already normalized 0-1, just scale to 100
+     * Energy scaling: reduced to 50 for stability
+     * Only high energy (0.6+) will cause significant score
      */
-    energy: 100,
+    energy: 50,
 } as const;
 
 /**
@@ -119,8 +120,9 @@ const THRESHOLDS = {
 /**
  * Abnormal magnitude threshold (g) for duration counting
  * Readings above this in a sliding window count toward duration
+ * Raised to 0.5 for stability during normal operation
  */
-const ABNORMAL_MAGNITUDE_THRESHOLD = 0.3; // g
+const ABNORMAL_MAGNITUDE_THRESHOLD = 0.5; // g
 
 // ============================================================================
 // DAMAGE SCORE CALCULATOR
@@ -135,34 +137,34 @@ export class DamageScoreCalculator {
      */
     calculate(features: DamageFeatures): DamageScore {
         // Calculate individual component scores (each 0-100)
-        const frequencyShiftScore = Math.min(100, 
+        const frequencyShiftScore = Math.min(100,
             Math.abs(features.frequencyShift) * SCALING.frequencyShift
         );
-        
-        const peakEnergyScore = Math.min(100, 
+
+        const peakEnergyScore = Math.min(100,
             features.peakEnergy * SCALING.energy
         );
-        
-        const durationScore = Math.min(100, 
+
+        const durationScore = Math.min(100,
             features.abnormalDuration * SCALING.duration
         );
-        
+
         // Weighted combination
         const score = Math.round(
             (frequencyShiftScore * WEIGHTS.frequencyShift) +
             (peakEnergyScore * WEIGHTS.peakEnergy) +
             (durationScore * WEIGHTS.duration)
         );
-        
+
         // Clamp to 0-100
         const finalScore = Math.max(0, Math.min(100, score));
-        
+
         // Categorize
         const { category, categoryLabel } = this.categorize(finalScore);
-        
+
         // Map to legacy status for backward compatibility
         const legacyStatus = this.toLegacyStatus(finalScore);
-        
+
         return {
             score: finalScore,
             category,
@@ -176,7 +178,7 @@ export class DamageScoreCalculator {
             legacyStatus,
         };
     }
-    
+
     /**
      * Categorize score into Safe/Risky/Heavily Damaged
      */
@@ -189,7 +191,7 @@ export class DamageScoreCalculator {
         }
         return { category: 'heavily_damaged', categoryLabel: 'Ağır Hasarlı' };
     }
-    
+
     /**
      * Map damage score to legacy NodeStatus for backward compatibility
      */
@@ -215,13 +217,13 @@ export class FeatureExtractor {
      * Stores recent magnitudes with timestamps
      */
     private magnitudeHistory: Map<string, Array<{ magnitude: number; timestamp: number }>> = new Map();
-    
+
     /** Window size for duration calculation (ms) */
     private readonly durationWindowMs = 10000; // 10 seconds
-    
+
     /** Max samples to keep per node */
     private readonly maxSamples = 200;
-    
+
     /**
      * Extract features for a node given current reading and baseline
      */
@@ -234,18 +236,18 @@ export class FeatureExtractor {
     ): DamageFeatures {
         // Update magnitude history for this node
         this.updateHistory(nodeId, currentMagnitude, timestamp);
-        
+
         // Calculate frequency shift (percentage)
         const frequencyShift = baselineFrequency > 0
             ? ((baselineFrequency - currentFrequency) / baselineFrequency) * 100
             : 0;
-        
+
         // Peak energy: normalize magnitude (assuming 2g is max expected)
         const peakEnergy = Math.min(1, currentMagnitude / 2.0);
-        
+
         // Abnormal duration: count time above threshold in sliding window
         const abnormalDuration = this.calculateAbnormalDuration(nodeId, timestamp);
-        
+
         return {
             frequencyShift,
             peakEnergy,
@@ -254,7 +256,7 @@ export class FeatureExtractor {
             baselineFrequency,
         };
     }
-    
+
     /**
      * Update sliding window of magnitude readings
      */
@@ -262,22 +264,22 @@ export class FeatureExtractor {
         if (!this.magnitudeHistory.has(nodeId)) {
             this.magnitudeHistory.set(nodeId, []);
         }
-        
+
         const history = this.magnitudeHistory.get(nodeId)!;
         history.push({ magnitude, timestamp });
-        
+
         // Remove old entries outside window
         const cutoff = timestamp - this.durationWindowMs;
         while (history.length > 0 && history[0].timestamp < cutoff) {
             history.shift();
         }
-        
+
         // Also cap total samples
         while (history.length > this.maxSamples) {
             history.shift();
         }
     }
-    
+
     /**
      * Calculate how many seconds of abnormal readings in the sliding window
      * Uses time-weighted approach for accurate duration
@@ -285,23 +287,23 @@ export class FeatureExtractor {
     private calculateAbnormalDuration(nodeId: string, currentTime: number): number {
         const history = this.magnitudeHistory.get(nodeId);
         if (!history || history.length < 2) return 0;
-        
+
         let abnormalMs = 0;
-        
+
         for (let i = 1; i < history.length; i++) {
             const prev = history[i - 1];
             const curr = history[i];
-            
+
             // If previous reading was abnormal, count the time until current
             if (prev.magnitude >= ABNORMAL_MAGNITUDE_THRESHOLD) {
                 abnormalMs += curr.timestamp - prev.timestamp;
             }
         }
-        
+
         // Convert to seconds
         return abnormalMs / 1000;
     }
-    
+
     /**
      * Reset history for a node
      */
@@ -332,7 +334,7 @@ export class ZeroCrossingFrequencyEstimator {
     private signalHistory: Map<string, number[]> = new Map();
     private readonly windowSize = 50; // samples
     private readonly sampleRateHz = 20; // 20 Hz from simulator
-    
+
     /**
      * Update with new reading and estimate frequency
      */
@@ -340,23 +342,23 @@ export class ZeroCrossingFrequencyEstimator {
         if (!this.signalHistory.has(nodeId)) {
             this.signalHistory.set(nodeId, []);
         }
-        
+
         const history = this.signalHistory.get(nodeId)!;
         history.push(magnitude);
-        
+
         // Keep only windowSize samples
         while (history.length > this.windowSize) {
             history.shift();
         }
-        
+
         // Need at least 10 samples for estimation
         if (history.length < 10) {
             return 5.0; // Default to ~5 Hz (typical building natural frequency)
         }
-        
+
         // Calculate mean
         const mean = history.reduce((a, b) => a + b, 0) / history.length;
-        
+
         // Count zero crossings (crossings of mean)
         let crossings = 0;
         for (let i = 1; i < history.length; i++) {
@@ -366,15 +368,15 @@ export class ZeroCrossingFrequencyEstimator {
                 crossings++;
             }
         }
-        
+
         // Frequency = (crossings / 2) / observation time
         const observationTimeSec = history.length / this.sampleRateHz;
         const frequency = (crossings / 2) / observationTimeSec;
-        
+
         // Clamp to reasonable building frequency range (0.5 - 20 Hz)
         return Math.max(0.5, Math.min(20, frequency));
     }
-    
+
     reset(nodeId?: string): void {
         if (nodeId) {
             this.signalHistory.delete(nodeId);
