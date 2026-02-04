@@ -7,6 +7,7 @@ import { DEMO_NODES, earthquakeSimulator } from '@/lib/simulator';
 import DashboardPanel from '@/components/dashboard/DashboardPanel';
 import SidebarNavigation from '@/components/SidebarNavigation';
 import TiltBuildingCard from '@/components/TiltBuildingCard';
+import RealTimeResourceChart from '@/components/RealTimeResourceChart';
 
 const SeismicMap = dynamic(() => import('@/components/map/SeismicMap'), {
   ssr: false,
@@ -103,35 +104,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Building Cards Section */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <TiltBuildingCard
-              buildingId="B-001"
-              score={85}
-              type="Konut"
-              yearBuilt={2015}
-            />
-            <TiltBuildingCard
-              buildingId="B-002"
-              score={72}
-              type="Ofis"
-              yearBuilt={2010}
-            />
-            <TiltBuildingCard
-              buildingId="B-003"
-              score={45}
-              type="Endüstriyel"
-              yearBuilt={1995}
-            />
-            <TiltBuildingCard
-              buildingId="B-004"
-              score={91}
-              type="Kamu"
-              yearBuilt={2020}
-            />
-          </div>
-        </div>
+
       </div>
     </div>
   );

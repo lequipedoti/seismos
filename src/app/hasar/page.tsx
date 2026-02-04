@@ -3,6 +3,7 @@
 import SidebarNavigation from '@/components/SidebarNavigation';
 import { useSeismosStore } from '@/lib/store';
 import { BUILDING_METADATA } from '@/lib/simulator';
+import TiltBuildingCard from '@/components/TiltBuildingCard';
 
 export default function HasarPage() {
     const { buildingDamages, nodes } = useSeismosStore();
@@ -60,6 +61,24 @@ export default function HasarPage() {
                             <div className="text-3xl font-bold text-red-400">{stats.collapsed}</div>
                             <div className="text-sm text-slate-400">Yıkık</div>
                         </div>
+                    </div>
+
+                    {/* 3D Tilt Cards Grid */}
+                    {/* 3D Tilt Cards Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        {buildings.slice(0, 4).map((b) => (
+                            <TiltBuildingCard
+                                key={b.id}
+                                buildingId={b.id}
+                                score={Math.round(b.damage > 0 ? 100 - b.damage : 100)} // Hasar yerine Sağlamlık Skoru
+                                type={b.meta?.structureType || 'Bilinmiyor'}
+                                yearBuilt={b.meta?.yearBuilt || 2000}
+                                onClick={() => {
+                                    useSeismosStore.getState().selectNode(b.id);
+                                    window.location.href = '/?nodeId=' + b.id; // Basit navigasyon, idealde router.push
+                                }}
+                            />
+                        ))}
                     </div>
 
                     {/* Building Table */}

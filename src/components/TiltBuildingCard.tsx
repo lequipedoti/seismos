@@ -6,16 +6,17 @@ interface TiltBuildingCardProps {
   score: number;
   type: string;
   yearBuilt: number;
+  onClick?: () => void;
 }
 
-export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }: TiltBuildingCardProps) {
+export default function TiltBuildingCard({ buildingId, score, type, yearBuilt, onClick }: TiltBuildingCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  
+
   // Mouse position relative to card
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  
+
   // Spring values for smooth animation
   const rotateX = useSpring(0, { mass: 0.1, stiffness: 150, damping: 15 });
   const rotateY = useSpring(0, { mass: 0.1, stiffness: 150, damping: 15 });
@@ -23,15 +24,15 @@ export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }:
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return;
-    
+
     const rect = ref.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     // Normalize to -0.5 to 0.5
     const normalizedX = (x / rect.width) - 0.5;
     const normalizedY = (y / rect.height) - 0.5;
-    
+
     // Apply rotation (inverted for natural feel)
     rotateX.set(normalizedY * 15);
     rotateY.set(normalizedX * -15);
@@ -58,11 +59,11 @@ export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }:
   };
 
   const getScoreText = (score: number) => {
-    if (score >= 90) return 'Excellent';
-    if (score >= 80) return 'Good';
-    if (score >= 60) return 'Fair';
-    if (score >= 40) return 'Poor';
-    return 'Critical';
+    if (score >= 90) return 'Mükemmel';
+    if (score >= 80) return 'İyi';
+    if (score >= 60) return 'Orta';
+    if (score >= 40) return 'Zayıf';
+    return 'Kritik';
   };
 
   return (
@@ -72,6 +73,7 @@ export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }:
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={onClick}
       style={{
         rotateX,
         rotateY,
@@ -81,10 +83,10 @@ export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }:
     >
       {/* 3D Shadow */}
       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-black/20 to-transparent rounded-2xl pointer-events-none" />
-      
+
       {/* Main Card */}
       <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 shadow-2xl overflow-hidden">
-        
+
         {/* Glare Effect */}
         <motion.div
           className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl pointer-events-none"
@@ -110,7 +112,7 @@ export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }:
               <p className="text-slate-400 text-sm">{type}</p>
             </div>
             <div className="text-right">
-              <div className="text-slate-400 text-xs">Built</div>
+              <div className="text-slate-400 text-xs">Yapım Yılı</div>
               <div className="text-white font-semibold">{yearBuilt}</div>
             </div>
           </div>
@@ -118,10 +120,10 @@ export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }:
           {/* Damage Score */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-slate-300 text-sm font-medium">Structural Integrity</span>
+              <span className="text-slate-300 text-sm font-medium">Yapısal Bütünlük</span>
               <span className="text-white font-bold text-lg">{score}%</span>
             </div>
-            
+
             {/* Score Bar */}
             <div className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden">
               <motion.div
@@ -131,7 +133,7 @@ export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }:
                 transition={{ duration: 1, ease: 'easeOut' }}
               />
             </div>
-            
+
             {/* Status Text */}
             <div className={`text-xs font-semibold ${score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : score >= 40 ? 'text-orange-400' : 'text-red-400'}`}>
               {getScoreText(score)}
@@ -147,14 +149,14 @@ export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }:
             >
               <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
                 <div className="flex justify-between">
-                  <span>Risk Level:</span>
+                  <span>Risk Seviyesi:</span>
                   <span className={score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-red-400'}>
-                    {score >= 80 ? 'Low' : score >= 60 ? 'Medium' : 'High'}
+                    {score >= 80 ? 'Düşük' : score >= 60 ? 'Orta' : 'Yüksek'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Inspection:</span>
-                  <span className="text-blue-400">Required</span>
+                  <span>Denetim:</span>
+                  <span className="text-blue-400">Gerekli</span>
                 </div>
               </div>
             </motion.div>
@@ -163,7 +165,7 @@ export default function TiltBuildingCard({ buildingId, score, type, yearBuilt }:
 
         {/* Corner Accent */}
         <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-transparent via-blue-400/20 to-transparent rounded-bl-2xl" />
-        
+
         {/* Bottom Accent */}
         <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent" />
       </div>

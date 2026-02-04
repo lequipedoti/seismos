@@ -2,13 +2,45 @@
 
 import SidebarNavigation from '@/components/SidebarNavigation';
 import { Activity, Cpu, Database, Wifi, Clock, TrendingUp } from 'lucide-react';
+import RealTimeResourceChart from '@/components/RealTimeResourceChart';
+import { useSeismosStore } from '@/lib/store';
+import { useState, useEffect } from 'react';
 
 export default function AnalitikPage() {
+    const { activeNodeCount, isEarthquakeActive } = useSeismosStore();
+    const [simulatedCPU, setSimulatedCPU] = useState(23);
+    const [simulatedNetwork, setSimulatedNetwork] = useState(45);
+
+    // Derive metrics from store state
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // CPU Load: Base 20% + Active Nodes impact + Random Noise + Earthquake Surge
+            const baseLoad = 20;
+            const nodeImpact = activeNodeCount * 0.2; // 80 nodes * 0.2 = ~16%
+            const quakeSurge = isEarthquakeActive ? 30 : 0; // Huge jump during quake
+            const noise = (Math.random() - 0.5) * 5;
+
+            const newCPU = Math.min(100, Math.max(5, baseLoad + nodeImpact + quakeSurge + noise));
+            setSimulatedCPU(newCPU);
+
+            // Network Traffic: Steady heartbeat + Earthquake events
+            const baseNet = 30; // Heartbeats
+            const quakeNet = isEarthquakeActive ? 50 : 0; // Consensus traffic flood
+            const netNoise = (Math.random() - 0.5) * 15;
+
+            const newNet = Math.min(100, Math.max(10, baseNet + quakeNet + netNoise));
+            setSimulatedNetwork(newNet);
+
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [activeNodeCount, isEarthquakeActive]);
+
     const metrics = [
-        { label: 'Aktif Sensörler', value: '78/80', icon: Wifi, color: 'green', change: '+2' },
-        { label: 'Ortalama Gecikme', value: '12ms', icon: Clock, color: 'blue', change: '-3ms' },
-        { label: 'CPU Kullanımı', value: '23%', icon: Cpu, color: 'purple', change: '+5%' },
-        { label: 'Veri İşleme Hızı', value: '1.2K/s', icon: Database, color: 'cyan', change: '+15%' },
+        { label: 'Aktif Sensörler', value: `${activeNodeCount}/80`, icon: Wifi, color: 'green', change: isEarthquakeActive ? 'Yüksek Trafik' : 'Stabil' },
+        { label: 'Ortalama Gecikme', value: isEarthquakeActive ? '45ms' : '12ms', icon: Clock, color: 'blue', change: isEarthquakeActive ? '+33ms' : '-3ms' },
+        { label: 'CPU Kullanımı', value: `${Math.round(simulatedCPU)}%`, icon: Cpu, color: 'purple', change: isEarthquakeActive ? '+High' : 'Normal' },
+        { label: 'Veri İşleme Hızı', value: isEarthquakeActive ? '4.8K/s' : '1.2K/s', icon: Database, color: 'cyan', change: isEarthquakeActive ? '+300%' : '+15%' },
         { label: 'Hata Oranı', value: '0.02%', icon: Activity, color: 'yellow', change: '-0.01%' },
         { label: 'Uptime', value: '99.97%', icon: TrendingUp, color: 'green', change: '+0.02%' },
     ];
@@ -47,34 +79,32 @@ export default function AnalitikPage() {
                         })}
                     </div>
 
-                    {/* System Status */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-                            <h3 className="text-white font-semibold mb-4">Sensör Durumu</h3>
-                            <div className="space-y-3">
-                                {[
-                                    { zone: 'Bölge A (SEN-001-020)', active: 20, total: 20 },
-                                    { zone: 'Bölge B (SEN-021-040)', active: 19, total: 20 },
-                                    { zone: 'Bölge C (SEN-041-060)', active: 20, total: 20 },
-                                    { zone: 'Bölge D (SEN-061-080)', active: 19, total: 20 },
-                                ].map((zone, i) => (
-                                    <div key={i} className="flex items-center justify-between">
-                                        <span className="text-sm text-slate-400">{zone.zone}</span>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-24 bg-slate-700 rounded-full h-2">
-                                                <div
-                                                    className="h-2 rounded-full bg-green-500"
-                                                    style={{ width: `${(zone.active / zone.total) * 100}%` }}
-                                                ></div>
-                                            </div>
-                                            <span className="text-xs text-white">{zone.active}/{zone.total}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                    {/* System Status & Live Monitoring */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        {/* Live Charts */}
+                        <div className="space-y-6">
+                            <RealTimeResourceChart
+                                title="CPU Kullanımı"
+                                subtitle="Sismik Veri İşleme Yükü"
+                                dataKey="value"
+                                color="cyan"
+                                maxValue={100}
+                                showLiveIndicator={true}
+                                value={simulatedCPU}
+                            />
+                            <RealTimeResourceChart
+                                title="Ağ Trafiği"
+                                subtitle="Sensör Veri Akışı"
+                                dataKey="value"
+                                color="blue"
+                                maxValue={100}
+                                showLiveIndicator={true}
+                                value={simulatedNetwork}
+                            />
                         </div>
 
-                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                        {/* Recent Events */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 h-fit">
                             <h3 className="text-white font-semibold mb-4">Son Sistem Olayları</h3>
                             <div className="space-y-3">
                                 {[
@@ -87,7 +117,7 @@ export default function AnalitikPage() {
                                     <div key={i} className="flex items-center gap-3">
                                         <span className="text-xs text-slate-500 w-12">{log.time}</span>
                                         <div className={`w-1.5 h-1.5 rounded-full ${log.type === 'success' ? 'bg-green-400' :
-                                                log.type === 'warning' ? 'bg-yellow-400' : 'bg-blue-400'
+                                            log.type === 'warning' ? 'bg-yellow-400' : 'bg-blue-400'
                                             }`}></div>
                                         <span className="text-sm text-slate-300">{log.event}</span>
                                     </div>
