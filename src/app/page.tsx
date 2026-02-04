@@ -6,6 +6,7 @@ import { useSeismosStore } from '@/lib/store';
 import { DEMO_NODES, earthquakeSimulator } from '@/lib/simulator';
 import DashboardPanel from '@/components/dashboard/DashboardPanel';
 import SidebarNavigation from '@/components/SidebarNavigation';
+import TiltBuildingCard from '@/components/TiltBuildingCard';
 
 const SeismicMap = dynamic(() => import('@/components/map/SeismicMap'), {
   ssr: false,
@@ -100,6 +101,10 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Building Cards Section */}
+        <div className="p-4 border-t border-slate-800 bg-slate-900/50">
         </div>
       </div>
     </div>

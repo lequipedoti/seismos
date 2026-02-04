@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Deprem sonrası bina hasar analizi ve yapısal sağlık izleme platformu",
 };
 
+import { ToastProvider } from "@/components/ToastProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,7 +30,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );
